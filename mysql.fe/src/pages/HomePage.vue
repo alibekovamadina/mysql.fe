@@ -6,6 +6,7 @@
         <td>Имя</td>
         <td>Фамилия</td>
         <td>Возраст</td>
+        <td>Компания</td>
         <td></td>
     </tr>
     <tr
@@ -16,10 +17,11 @@
         <td>{{ user.firstname }}</td>
         <td>{{ user.secondname }}</td>
         <td>{{ user.age }}</td>
+        <td>{{ user.title }}</td>
         <td>
             <button
-                @click="editUser(user)"                                                               
-            >✏</button>
+                @click="editUser(user)"
+            >📝</button>
             <button
                 @click="deleteUser(user.id)"
             >❌</button>
@@ -42,11 +44,20 @@
         placeholder="Возраст"
         v-model="age"
     >
+    <select
+        v-model="company_id"
+    >
+        <option
+            v-for="company in companies"
+            :key="company.id"
+            :value="company.id"
+        >{{ company.title }}</option>
+    </select>
     <button
         @click.prevent="addUser"
     >Создать пользователя</button>
     <button
-        v-if="currentId"
+        v-if="current"
         @click.prevent="updateUser"
     >Обновить пользователя</button>
 </form>
@@ -59,14 +70,18 @@ data() {
     return {
         title: '',
         users: [],
-        currentId: null,
+        companies: [],
+        current: null,
         firstname: '',
         secondname: '',
-        age: null
+        age: null,
+        company_id: null,
     }
 },
-mounted() {  //чтобы при загрузке сразу открылась таблица с данными//
+mounted() {
     this.loadTitle();
+    this.loadCompanies();
+    
 },
 methods: {
     async loadTitle() {
@@ -74,36 +89,49 @@ methods: {
         this.title = result.data.title
         this.users = result.data.users
     },
+    async loadCompanies() {
+        const result = await axios.get('http://mysql.be/companies.php')
+        this.companies = result.data.companies
+    },
     async addUser() {
         await axios.post('http://mysql.be/index.php', {
             firstname: this.firstname,
             secondname: this.secondname,
-            age: this.age
+            age: this.age,
+            company_id: this.company_id
         })
+        this.clearForm();
+        this.loadTitle();
+    },
+    clearForm() {
+        this.current = null;
         this.firstname = '';
         this.secondname = '';
         this.age = null;
-        this.loadTitle();
+        this.company_id = null;
     },
     editUser(user) {
         this.firstname = user.firstname;
         this.secondname = user.secondname;
         this.age = user.age;
-        this.currentId = user.id;
+        this.current = user.id;
+        this.company_id = user.company_id;
     },
     async deleteUser(id) {
-        if(confirm('Удалить')) {
+        if(confirm('Удалить?')) {
             await axios.delete('http://mysql.be/index.php?id=' + id);
-            this.loadTitle(); //обновление,повторная загрузка//
+            this.loadTitle();
         }
     },
     async updateUser() {
         await axios.put('http://mysql.be/index.php', {
-            id: this.currentId,
+            id: this.current,
             firstname: this.firstname,
             secondname: this.secondname,
-            age: this.age
+            age: this.age,
+            company_id: this.company_id
         });
+        this.clearForm();
         this.loadTitle();
     }
 }
@@ -113,12 +141,10 @@ methods: {
 <style>
     table, td {
         border: 1px solid black;
-        color: white;
     }
 
     table {
         border-collapse: collapse;
-        background-color: rgba(145, 4, 4, 0.959);
     }
     
     td {
